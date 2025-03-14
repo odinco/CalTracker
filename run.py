@@ -7,17 +7,28 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from flask_socketio import SocketIO
 
-base_path = os.path.abspath(os.path.dirname(__file__))
-instance_path = os.path.join(base_path, "instance")
+# Determine the base directory dynamically
+if getattr(sys, 'frozen', False):  # Running as a PyInstaller executable
+    base_dir = os.path.dirname(sys.executable)
+else:  # Running as a Python script
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Define the instance directory inside CalTracke
+instance_path = os.path.join(base_dir, "instance")
+
+# Ensure the instance directory exists
+os.makedirs(instance_path, exist_ok=True)
+
+# Ensure the templates folder is correctly referenced
+template_path = os.path.join(base_dir, "templates")
 
 # Corrected Flask app initialization
-app = Flask(__name__, template_folder="templates")
+app = Flask(__name__, template_folder=templates_path)
 CORS(app)
-
 
 # Define database path
 db_path = os.path.join(instance_path, "calibration.db")
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///calibration.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_path}"
 
 # Add this line to debug where the database is being created
 print(f"📌 Database path: {db_path}")
