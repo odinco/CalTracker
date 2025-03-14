@@ -2,7 +2,6 @@ import webbrowser
 import threading
 import sys
 import os
-import secrets
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
@@ -35,7 +34,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_path}"
 print(f"📌 Database path: {db_path}")
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.secret_key = secrets.token_hex(16)  # Securely generate a secret key
+app.secret_key = "replace_with_secure_key"  # Simple secret key
 
 db = SQLAlchemy(app)
 
@@ -67,7 +66,7 @@ class CalibrationData(db.Model):
     reso_completed = db.Column(db.Boolean, default=False)
     dm_completed = db.Column(db.Boolean, default=False)
 
-# Credentials (for demonstration; replace with a secure method)
+# Credentials (simple hardcoded credentials)
 USERNAME = "admin"
 PASSWORD = "password123"
 
