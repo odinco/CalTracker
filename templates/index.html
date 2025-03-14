@@ -297,112 +297,119 @@
                 alert("Error saving calibrations.");
             }
         }
+        		
+            function toggleEditMode() {
+    editMode = !editMode;
+    loadCalibrations();
 
-        function toggleEditMode() {
-            editMode = !editMode;
-            loadCalibrations();
+    // Show or hide the Delete Component button based on Edit Mode
+    let deleteComponentBtn = document.getElementById("deleteComponentBtn");
+    if (editMode && selectedComponent) {
+        deleteComponentBtn.style.display = "block";
+    } else {
+        deleteComponentBtn.style.display = "none";
+    }
 
-            // Show or hide the Delete Component button based on Edit Mode
-            let deleteComponentBtn = document.getElementById("deleteComponentBtn");
-            if (editMode && selectedComponent) {
-                deleteComponentBtn.style.display = "block";
-            } else {
-                deleteComponentBtn.style.display = "none";
-            }
-        }
-
+    // Update the UI for existing calibrations
+    let deleteButtons = document.querySelectorAll('.cal-entry button');
+    deleteButtons.forEach(button => {
+        button.style.display = editMode ? 'inline-block' : 'none';
+    });
+} 
+            
         window.onload = loadComponents;
 
-        async function printCalibrations() {  // Add async keyword
-            let componentDropdown = document.getElementById('componentDropdown');
-            let selectedComponentName = componentDropdown.options[componentDropdown.selectedIndex].text;
+        async function printCalibrations() {
+    let componentDropdown = document.getElementById('componentDropdown');
+    let selectedComponentName = componentDropdown.options[componentDropdown.selectedIndex].text;
 
-            let calibrationEntries = document.querySelectorAll('#calList .cal-entry');
-            let tableRows = Array.from(calibrationEntries).map(entry => {
-                const calNumber = entry.querySelector('strong').textContent.replace('Cal Number:', '').trim();
-                const description = entry.querySelector('[id^="desc_"]').value || '-';
-                const pri = entry.querySelector('[id^="pri_"]').value || '-';
-                const sec = entry.querySelector('[id^="sec_"]').value || '-';
-                const reso = entry.querySelector('[id^="reso_"]').value || '-';
-                const dm = entry.querySelector('[id^="dm_"]').value || '-';
+    let calibrationEntries = document.querySelectorAll('#calList .cal-entry');
+    let tableRows = Array.from(calibrationEntries).map(entry => {
+        const calNumber = entry.querySelector('strong').textContent.replace('Cal Number:', '').trim();
+        const description = entry.querySelector('[id^="desc_"]').value || '-';
+        const pri = entry.querySelector('[id^="pri_"]').value || '-';
+        const sec = entry.querySelector('[id^="sec_"]').value || '-';
+        const reso = entry.querySelector('[id^="reso_"]').value || '-';
+        const dm = entry.querySelector('[id^="dm_"]').value || '-';
 
-                return `
-                    <tr>
-                        <td>${calNumber}</td>
-                        <td>${description}</td>
-                        <td>${pri}</td>
-                        <td>${sec}</td>
-                        <td>${reso}</td>
-                        <td>${dm}</td>
-                    </tr>`;
-            }).join('');
+        return `
+            <tr>
+                <td>${calNumber}</td>
+                <td>${description}</td>
+                <td>${pri}</td>
+                <td>${sec}</td>
+                <td>${reso}</td>
+                <td>${dm}</td>
+            </tr>`;
+    }).join('');
 
-            const printHTML = `
-                <html>
-                    <head>
-                        <title>Calibration Data - ${selectedComponentName}</title>
-                        <style>
-                            body {
-                                font-family: 'Poppins', sans-serif;
-                                padding: 20px;
-                            }
-                            h1 {
-                                text-align: center;
-                                margin-bottom: 30px;
-                            }
-                            table {
-                                width: 100%;
-                                border-collapse: collapse;
-                            }
-                            th, td {
-                                border: 1px solid #ddd;
-                                padding: 8px;
-                                text-align: center;
-                            }
-                            th {
-                                background-color: #f4f4f4;
-                                font-weight: bold;
-                            }
-                            tr:nth-child(even) {
-                                background-color: #f9f9f9;
-                            }
-                            footer {
-                                margin-top: 30px;
-                                font-size: 12px;
-                                text-align: center;
-                                color: #666;
-                            }
-                        </style>
-                    </head>
-                    <body>
-                        <h1>Calibration Data for: ${selectedComponentName}</h1>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Cal Number</th>
-                                    <th>Description</th>
-                                    <th>PRI</th>
-                                    <th>SEC</th>
-                                    <th>RESO</th>
-                                    <th>DM</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${tableRows}
-                            </tbody>
-                        </table>
-                        <footer>
-                            Generated by Cal Board X &copy; ${new Date().getFullYear()}
-                        </footer>
-                    </body>
-                </html>`;
+    const printHTML = `
+        <html>
+            <head>
+                <title>Calibration Data - ${selectedComponentName}</title>
+                <style>
+                    body {
+                        font-family: 'Poppins', sans-serif;
+                        padding: 20px;
+                    }
+                    h1 {
+                        text-align: center;
+                        margin-bottom: 30px;
+                    }
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                    }
+                    th, td {
+                        border: 1px solid #ddd;
+                        padding: 8px;
+                        text-align: center;
+                    }
+                    th {
+                        background-color: #f4f4f4;
+                        font-weight: bold;
+                    }
+                    tr:nth-child(even) {
+                        background-color: #f9f9f9;
+                    }
+                    footer {
+                        margin-top: 30px;
+                        font-size: 12px;
+                        text-align: center;
+                        color: #666;
+                    }
+                </style>
+            </head>
+            <body>
+                <h1>Calibration Data for: ${selectedComponentName}</h1>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Cal Number</th>
+                            <th>Description</th>
+                            <th>PRI</th>
+                            <th>SEC</th>
+                            <th>RESO</th>
+                            <th>DM</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableRows}
+                    </tbody>
+                </table>
+                <footer>
+                    Generated by Cal Board X &copy; ${new Date().getFullYear()}
+                </footer>
+            </body>
+        </html>`;
 
-            let originalContent = document.body.innerHTML;
-            document.body.innerHTML = printHTML;
-            window.print();
-            document.body.innerHTML = originalContent;
-            window.location.reload();
-        }
+    // Open a new window for printing
+    let printWindow = window.open('', '_blank');
+    printWindow.document.write(printHTML);
+    printWindow.document.close();
+    printWindow.print();
+}
+
     </script>
 </head>
 <body>
