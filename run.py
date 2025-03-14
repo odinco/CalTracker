@@ -2,6 +2,7 @@ import webbrowser
 import threading
 import sys
 import os
+import secrets
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
@@ -23,7 +24,7 @@ os.makedirs(instance_path, exist_ok=True)
 template_path = os.path.join(base_dir, "templates")
 
 # Corrected Flask app initialization
-app = Flask(__name__, template_folder=templates_path)
+app = Flask(__name__, template_folder=template_path)
 CORS(app)
 
 # Define database path
@@ -34,7 +35,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_path}"
 print(f"📌 Database path: {db_path}")
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.secret_key = "replace_with_secure_key"
+app.secret_key = secrets.token_hex(16)  # Securely generate a secret key
 
 db = SQLAlchemy(app)
 
@@ -106,15 +107,14 @@ def add_component():
     data = request.json
     print(f"📌 Received Component Data: {data}")  # Debugging
 
-    new_component = Component(name=data['name'])
-    db.session.add(new_component)
-    
     try:
+        new_component = Component(name=data['name'])
+        db.session.add(new_component)
         db.session.commit()
-        print(f"✅ Added Component: {new_component.name} (ID: {new_component.id})")  # Debugging
+        print(f"✅ Added Component: {new_component.name} (ID: {new_component.id})")
         return jsonify({"message": "Component added successfully", "id": new_component.id})
     except Exception as e:
-        db.session.rollback()  # Rollback in case of failure
+        db.session.rollback()
         print(f"❌ Database Error: {e}")
         return jsonify({"error": "Failed to add component"}), 500
 
@@ -126,56 +126,66 @@ def get_components():
 @app.route('/add_calibration', methods=['POST'])
 def add_calibration():
     data = request.json
-    new_cal = CalibrationData(
-        component_id=data['component_id'],
-        cal_number=data['cal_number']
-    )
-    db.session.add(new_cal)
-    db.session.commit()
+    try:
+        new_cal = CalibrationData(
+            component_id=data['component_id'],
+            cal_number=data['cal_number']
+        )
+        db.session.add(new_cal)
+        db.session.commit()
 
-    # Notify clients about the new calibration
-    notify_clients()
+        # Notify clients about the new calibration
+        notify_clients()
 
-    return jsonify({
-        "message": "Calibration entry added successfully",
-        "cal": {
-            "id": new_cal.id,
-            "component_id": new_cal.component_id,
-            "cal_number": new_cal.cal_number,
-            "description": new_cal.description,
-            "pri": new_cal.pri,
-            "sec": new_cal.sec,
-            "reso": new_cal.reso,
-            "dm": new_cal.dm,
-            "pri_completed": new_cal.pri_completed,
-            "sec_completed": new_cal.sec_completed,
-            "reso_completed": new_cal.reso_completed,
-            "dm_completed": new_cal.dm_completed
-        }
-    })
+        return jsonify({
+            "message": "Calibration entry added successfully",
+            "cal": {
+                "id": new_cal.id,
+                "component_id": new_cal.component_id,
+                "cal_number": new_cal.cal_number,
+                "description": new_cal.description,
+                "pri": new_cal.pri,
+                "sec": new_cal.sec,
+                "reso": new_cal.reso,
+                "dm": new_cal.dm,
+                "pri_completed": new_cal.pri_completed,
+                "sec_completed": new_cal.sec_completed,
+                "reso_completed": new_cal.reso_completed,
+                "dm_completed": new_cal.dm_completed
+            }
+        })
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Database Error: {e}")
+        return jsonify({"error": "Failed to add calibration"}), 500
 
 @app.route('/update_cal', methods=['POST'])
 def update_cal():
     data = request.json.get('updates', [])
 
-    for update in data:
-        cal_entry = CalibrationData.query.get(update['id'])
-        if cal_entry:
-            cal_entry.description = update.get('description', cal_entry.description)
-            cal_entry.pri = update.get('pri', cal_entry.pri)
-            cal_entry.sec = update.get('sec', cal_entry.sec)
-            cal_entry.reso = update.get('reso', cal_entry.reso)
-            cal_entry.dm = update.get('dm', cal_entry.dm)
+    try:
+        for update in data:
+            cal_entry = CalibrationData.query.get(update['id'])
+            if cal_entry:
+                cal_entry.description = update.get('description', cal_entry.description)
+                cal_entry.pri = update.get('pri', cal_entry.pri)
+                cal_entry.sec = update.get('sec', cal_entry.sec)
+                cal_entry.reso = update.get('reso', cal_entry.reso)
+                cal_entry.dm = update.get('dm', cal_entry.dm)
 
-    db.session.commit()
-    notify_clients()  # Notify clients about the update
-    return jsonify({"message": "Calibrations updated successfully!"})
+        db.session.commit()
+        notify_clients()  # Notify clients about the update
+        return jsonify({"message": "Calibrations updated successfully!"})
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Database Error: {e}")
+        return jsonify({"error": "Failed to update calibrations"}), 500
 
 @app.route('/get_calibrations/<int:component_id>', methods=['GET'])
 def get_calibrations(component_id):
     calibrations = CalibrationData.query.filter_by(component_id=component_id).all()
     return jsonify([{
-        "id": c.id, 
+        "id": c.id,
         "cal_number": c.cal_number,
         "description": c.description,
         "pri": c.pri,
@@ -190,37 +200,52 @@ def get_calibrations(component_id):
 
 @app.route('/delete_cal/<int:cal_id>', methods=['DELETE'])
 def delete_cal(cal_id):
-    cal = CalibrationData.query.get(cal_id)
-    if cal:
-        db.session.delete(cal)
-        db.session.commit()
-        return jsonify({"message": "Calibration deleted successfully!"}), 200
-    return jsonify({"error": "Calibration not found"}), 404
+    try:
+        cal = CalibrationData.query.get(cal_id)
+        if cal:
+            db.session.delete(cal)
+            db.session.commit()
+            return jsonify({"message": "Calibration deleted successfully!"}), 200
+        return jsonify({"error": "Calibration not found"}), 404
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Database Error: {e}")
+        return jsonify({"error": "Failed to delete calibration"}), 500
 
 @app.route('/delete_component/<int:component_id>', methods=['DELETE'])
 def delete_component(component_id):
-    component = Component.query.get(component_id)
-    if component:
-        CalibrationData.query.filter_by(component_id=component_id).delete()
-        db.session.delete(component)
-        db.session.commit()
-        return jsonify({"message": "Component and calibrations deleted successfully!"}), 200
-    return jsonify({"error": "Component not found"}), 404
+    try:
+        component = Component.query.get(component_id)
+        if component:
+            CalibrationData.query.filter_by(component_id=component_id).delete()
+            db.session.delete(component)
+            db.session.commit()
+            return jsonify({"message": "Component and calibrations deleted successfully!"}), 200
+        return jsonify({"error": "Component not found"}), 404
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Database Error: {e}")
+        return jsonify({"error": "Failed to delete component"}), 500
 
 @app.route('/update_status', methods=['POST'])
 def update_status():
     data = request.json
-    cal_entry = CalibrationData.query.get(data['id'])
-    if not cal_entry:
-        return jsonify({"error": "Entry not found"}), 404
+    try:
+        cal_entry = CalibrationData.query.get(data['id'])
+        if not cal_entry:
+            return jsonify({"error": "Entry not found"}), 404
 
-    cal_entry.pri_completed = data.get('pri_completed', cal_entry.pri_completed)
-    cal_entry.sec_completed = data.get('sec_completed', cal_entry.sec_completed)
-    cal_entry.reso_completed = data.get('reso_completed', cal_entry.reso_completed)
-    cal_entry.dm_completed = data.get('dm_completed', cal_entry.dm_completed)
+        cal_entry.pri_completed = data.get('pri_completed', cal_entry.pri_completed)
+        cal_entry.sec_completed = data.get('sec_completed', cal_entry.sec_completed)
+        cal_entry.reso_completed = data.get('reso_completed', cal_entry.reso_completed)
+        cal_entry.dm_completed = data.get('dm_completed', cal_entry.dm_completed)
 
-    db.session.commit()
-    return jsonify({"message": "Status updated successfully!"})
+        db.session.commit()
+        return jsonify({"message": "Status updated successfully!"})
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Database Error: {e}")
+        return jsonify({"error": "Failed to update status"}), 500
 
 # SocketIO Events
 @socketio.on('connect')
@@ -236,5 +261,7 @@ def open_browser():
     webbrowser.open_new("http://127.0.0.1:5000")
 
 if __name__ == "__main__":
-    threading.Timer(1.25, open_browser).start()
-    socketio.run(app, debug=False, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)
+    with app.app_context():
+        db.create_all()  # Ensure database tables are created
+    threading.Timer(2, open_browser).start()  # Open browser after 2 seconds
+    socketio.run(app, debug=True, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)
