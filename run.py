@@ -7,7 +7,6 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from flask_socketio import SocketIO
 
-
 base_path = os.path.abspath(os.path.dirname(__file__))
 instance_path = os.path.join(base_path, "instance")
 
